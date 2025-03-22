@@ -1,0 +1,18 @@
+{
+  "name": "audio-to-db",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^4.21.2",
+    "node-audiorecorder": "^3.0.0",
+    "node-microphone": "^0.1.6",
+    "play-sound": "^1.1.6"
+  }
+}

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio dB Meter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        button {
+            font-size: 16px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        #dbLevel {
+            font-size: 24px;
+            margin: 20px;
+        }
+        .status {
+            color: #666;
+            margin: 10px;
+        }
+        #timer {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 20px;
+            color: #444;
+        }
+        #stopRecording {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            display: none;
+        }
+        #startRecording {
+            background-color: #44aa44;
+            color: white;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Audio dB Meter</h1>
+    <button id="playTone">Play Tone</button>
+    <button id="startRecording">Start Recording</button>
+    <button id="stopRecording">Stop Recording</button>
+    <div id="timer">01:00</div>
+    <div id="dbLevel">Sound level: -- dB</div>
+    <div id="status" class="status"></div>
+
+    <script>
+        const SAMPLE_RATE = 44100;
+        const REFERENCE = 0.00002; // 20 micropascals (reference for dB SPL)
+        const RECORDING_DURATION = 60; // 1 minute in seconds
+
+        // Create audio context
+        let audioContext;
+        let recorder;
+        let mediaStream;
+        let recordingInterval;
+        let timerInterval;
+        let isRecording = false;
+        let remainingTime = RECORDING_DURATION;
+
+        // Generate tone
+        function generateTone(frequency = 440, duration = 2) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+
+            document.getElementById('status').textContent = 'Playing tone...';
+            setTimeout(() => {
+                document.getElementById('status').textContent = 'Tone finished';
+            }, duration * 1000);
+        }
+
+        // Update timer display
+        function updateTimer() {
+            const minutes = Math.floor(remainingTime / 60);
+            const seconds = remainingTime % 60;
+            document.getElementById('timer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Stop recording
+        function stopRecording() {
+            if (!isRecording) return;
+            
+            isRecording = false;
+            clearInterval(recordingInterval);
+            clearInterval(timerInterval);
+            
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+            
+            document.getElementById('status').textContent = 'Recording stopped';
+            document.getElementById('startRecording').style.display = 'inline-block';
+            document.getElementById('stopRecording').style.display = 'none';
+            
+            // Reset timer
+            remainingTime = RECORDING_DURATION;
+            updateTimer();
+        }
+
+        // Record audio and calculate dB
+        async function startRecording() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                const analyser = audioContext.createAnalyser();
+                
+                source.connect(analyser);
+                analyser.fftSize = 2048;
+
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Float32Array(bufferLength);
+
+                document.getElementById('status').textContent = 'Recording...';
+                document.getElementById('startRecording').style.display = 'none';
+                document.getElementById('stopRecording').style.display = 'inline-block';
+                
+                isRecording = true;
+                remainingTime = RECORDING_DURATION;
+
+                // Update dB level every 100ms
+                recordingInterval = setInterval(() => {
+                    if (!isRecording) return;
+                    
+                    analyser.getFloatTimeDomainData(dataArray);
+                    
+                    // Calculate RMS
+                    const rms = Math.sqrt(
+                        dataArray.reduce((sum, val) => sum + val * val, 0) / bufferLength
+                    );
+                    
+                    // Calculate dB SPL
+                    const db = 20 * Math.log10(Math.max(rms, 1e-10) / REFERENCE);
+                    document.getElementById('dbLevel').textContent = 
+                        `Sound level: ${db.toFixed(1)} dB SPL`;
+                }, 100);
+
+                // Update timer every second
+                timerInterval = setInterval(() => {
+                    if (!isRecording) return;
+                    
+                    remainingTime--;
+                    updateTimer();
+                    
+                    if (remainingTime <= 0) {
+                        stopRecording();
+                    }
+                }, 1000);
+
+            } catch (err) {
+                console.error('Error:', err);
+                document.getElementById('status').textContent = 'Error: ' + err.message;
+                stopRecording();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('playTone').addEventListener('click', () => generateTone());
+        document.getElementById('startRecording').addEventListener('click', startRecording);
+        document.getElementById('stopRecording').addEventListener('click', stopRecording);
+    </script>
+</body>
+</html>

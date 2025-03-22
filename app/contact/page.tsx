@@ -52,13 +52,13 @@ export default function ContactPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-background to-background/80">
+		<div className="min-h-screen bg-gradient-to-b from-violet-950 to-black">
 			<div className="container px-4 py-20 mx-auto max-w-5xl">
 				<div className="flex flex-col items-center text-center mb-12">
 					<div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
 						<Volume2 className="w-8 h-8 text-primary animate-pulse" />
 					</div>
-					<h1 className="text-4xl font-bold tracking-tight mb-2">
+					<h1 className="text-4xl font-bold tracking-tight mb-2 text-white">
 						Contact DBucks
 					</h1>
 					<p className="text-xl text-blue-700 max-w-2xl">
@@ -268,7 +268,7 @@ export default function ContactPage() {
 						{[1, 2, 3, 4, 5].map((i) => (
 							<div
 								key={i}
-								className="w-1 bg-primary animate-sound-wave"
+								className="w-1 bg-white animate-sound-wave"
 								style={{
 									height: `${Math.random() * 24 + 8}px`,
 									animationDelay: `${i * 0.1}s`,
